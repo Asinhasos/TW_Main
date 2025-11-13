@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+            <title>David Sousa Pinto - Minigame :D</title>
+            <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
+            <link rel="stylesheet" href="css_david_pinto_202005722.css">          <style>
+                  body {
+      margin: 0;
+      color: #000000;
+      font-weight: 500;
+      font-family: system-ui, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #info {
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+        #gameContainer {
+      width: 100%;
+      max-width: 450px;
+      margin: auto;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      background: #222;
+      border: 2px solid #555;
+      border-radius: 8px;
+      width: 100%;   
+      height: auto;
+    }
+
+    #startBtn {
+    background-color: deepskyblue;
+    width: 30%;
+    padding: 10px; 
+    margin: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+    }
+
+    #startBtn:active {
+      opacity: 0.8;
+    }
+    
+    #status {
+      font-size: 14px;
+      margin-bottom: 6px;
+      }
+
+    #main {
+      height:90%;
+    }
+        </style>
+    </head>
+
+    <body>
+        <main id="main">
+            <div id="info">
+    <div id="status">Tilt your phone to move the player. Collect the 3 coins and go to the door!</div>
+    <button id="startBtn">Activate phone movement</button>
+    <a href="david_pinto_page_no_ai_202005722.html"><button id="backmain">Main page</button></a>
+  </div>
+
+  <div id="gameContainer">
+    <canvas id="game" width="400" height="600"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const startBtn = document.getElementById("startBtn");
+
+    // Player
+    const player = {
+      x: 40,
+      y: 560,
+      r: 10
+    };
+
+    // Tilt 
+    let tiltX = 0; // esquerda/direita (gamma)
+    let tiltY = 0; // cima/baixo (beta)
+
+    // Walls of the maze 
+    const walls = [
+      // Outside
+      { x: 0,   y: 0,   w: 400, h: 10 },
+      { x: 0,   y: 590, w: 400, h: 10 },
+      { x: 0,   y: 0,   w: 10,  h: 600 },
+      { x: 390, y: 0,   w: 10,  h: 600 },
+
+      // Inside
+      { x: 50,  y: 100, w: 300, h: 10 },
+      { x: 50,  y: 100, w: 10,  h: 200 },
+      { x: 90,  y: 290, w: 110, h: 10 },  
+      { x: 290, y: 290, w: 70,  h: 10 },  
+      { x: 90,  y: 150, w: 10,  h: 150 },
+      { x: 140, y: 150, w: 210, h: 10 },
+      { x: 340, y: 150, w: 10,  h: 150 },
+      { x: 140, y: 200, w: 10,  h: 240 },
+      { x: 190, y: 200, w: 160, h: 10 },
+      { x: 190, y: 200, w: 10,  h: 200 },
+      { x: 230, y: 390, w: 170, h: 10 },
+      { x: 50,  y: 390, w: 120, h: 10 },
+      { x: 50,  y: 390, w: 10,  h: 130 },
+      { x: 90,  y: 430, w: 260, h: 10 }
+    ];
+
+
+    // Exit Door 
+    const exitDoor = {
+      x: 330,
+      y: 20,
+      w: 40,
+      h: 40,
+      active: false
+    };
+
+    let lastTime = 0;
+    let gameStarted = false;
+    
+function resetGame() {
+  player.x = 40;
+  player.y = 560;
+  generateCoins(); 
+  exitDoor.active = false;
+  statusEl.textContent = "Tilt your phone to move the player. Collect the 3 coins and go to the door!"
+}
+
+    // Request permission on iOS / some browsers
+    async function enableOrientation() {
+      try {
+        if (typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function") {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response === "granted") {
+            window.addEventListener("deviceorientation", handleOrientation);
+            statusEl.textContent = "Sensores ativados! Jogo em curso.";
+            gameStarted = true;
+          } else {
+            statusEl.textContent = "Permissão negada. Não é possível usar o sensor de movimento.";
+          }
+        } else {
+          // Android / outros
+          window.addEventListener("deviceorientation", handleOrientation);
+          statusEl.textContent = "Sensores ativados! Jogo em curso.";
+          gameStarted = true;
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Erro ao tentar aceder ao sensor de movimento.";
+      }
+    }
+    let coins = [];
+
+function generateCoins() {
+  coins = [];
+  const numCoins = 3;
+  for (let i = 0; i < numCoins; i++) {
+    let valid = false;
+    let coin = {};
+    while (!valid) {
+      coin = {
+        x: Math.random() * (canvas.width - 40) + 20,
+        y: Math.random() * (canvas.height - 40) + 20,
+        r: 8,
+        collected: false
+      };
+
+      // Check if you are colliding with any walls
+      valid = true;
+      for (const wall of walls) {
+        if (circleRectCollision(coin.x, coin.y, coin.r + 2, wall)) {
+          valid = false;
+          break;
+        }
+      }
+    }
+    coins.push(coin);
+  }
+}
+
+
+    function handleOrientation(event) {
+      // gamma: esquerda/direita, beta: frente/trás
+      tiltX = event.gamma || 0;
+      tiltY = event.beta || 0;
+    }
+
+    startBtn.addEventListener("click", () => {
+      enableOrientation();
+    });
+
+    // Collision
+    function circleRectCollision(px, py, pr, rect) {
+      const closestX = Math.max(rect.x, Math.min(px, rect.x + rect.w));
+      const closestY = Math.max(rect.y, Math.min(py, rect.y + rect.h));
+      const dx = px - closestX;
+      const dy = py - closestY;
+      return (dx * dx + dy * dy) < (pr * pr);
+    }
+
+    // Update
+    function update(dt) {
+      if (!gameStarted) return;
+
+      // Convert tilt to speed
+      const maxSpeed = 4; // px para "frame"
+      const vx = (tiltX / 45) * maxSpeed; // ~45º incline = maximum speed X e Y 
+      const vy = (tiltY / 45) * maxSpeed;
+
+      // Movimento com resolução de colisão separada X/Y
+      // Movimento em X
+      let oldX = player.x;
+      player.x += vx * dt;
+
+      for (const wall of walls) {
+        if (circleRectCollision(player.x, player.y, player.r, wall)) {
+          player.x = oldX; 
+          break;
+        }
+      }
+
+      // Movimento em Y
+      let oldY = player.y;
+      player.y += vy * dt;
+
+      for (const wall of walls) {
+        if (circleRectCollision(player.x, player.y, player.r, wall)) {
+          player.y = oldY; // anula movimento em Y
+          break;
+        }
+      }
+
+      // Limits
+      if (player.x - player.r < 0) player.x = player.r;
+      if (player.x + player.r > canvas.width) player.x = canvas.width - player.r;
+      if (player.y - player.r < 0) player.y = player.r;
+      if (player.y + player.r > canvas.height) player.y = canvas.height - player.r;
+
+      // Check coin collection
+      let collectedCount = 0;
+      for (const c of coins) {
+        if (!c.collected) {
+          const dx = player.x - c.x;
+          const dy = player.y - c.y;
+          const dist2 = dx * dx + dy * dy;
+          if (dist2 < (player.r + c.r) * (player.r + c.r)) {
+            c.collected = true;
+          }
+        }
+        if (c.collected) collectedCount++;
+      }
+
+      statusEl.textContent = `Collected coins: ${collectedCount}/3`;
+
+      // Activate exit door
+      if (collectedCount === coins.length) {
+        exitDoor.active = true;
+      }
+
+      // Verify player
+      if (exitDoor.active) {
+        const inDoorX = (player.x + player.r > exitDoor.x) &&
+                        (player.x - player.r < exitDoor.x + exitDoor.w);
+        const inDoorY = (player.y + player.r > exitDoor.y) &&
+                        (player.y - player.r < exitDoor.y + exitDoor.h);
+        if (inDoorX && inDoorY) {
+          alert("Congratulations! You've found the exit! Restarting game.");
+          resetGame();
+        }
+      }
+    }
+
+    
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // background
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // walls
+      ctx.fillStyle = "#555";
+      walls.forEach(w => {
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+      });
+
+      // coins
+      coins.forEach(c => {
+        if (!c.collected) {
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+          ctx.fillStyle = "gold";
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#b8860b";
+          ctx.stroke();
+        }
+      });
+
+      // door
+      if (exitDoor.active) {
+        ctx.fillStyle = "#2ecc71";
+      } else {
+        ctx.fillStyle = "#555";
+      }
+      ctx.fillRect(exitDoor.x, exitDoor.y, exitDoor.w, exitDoor.h);
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(exitDoor.x, exitDoor.y, exitDoor.w, exitDoor.h);
+
+      // player
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+      ctx.fillStyle = "#0a84ff";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#003366";
+      ctx.stroke();
+    }
+
+    // Loop
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = (timestamp - lastTime) / 16.67; // ~ normalizar para 60fps
+      lastTime = timestamp;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+   generateCoins();
+resetGame();
+requestAnimationFrame(loop);
+
+  </script>
+        </main>
+    </body>

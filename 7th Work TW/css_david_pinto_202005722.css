@@ -1,0 +1,335 @@
+
+body {
+    scrollbar-width: none;
+    background-color: rgb(85, 6, 149);
+}
+
+main {
+    background-color:rgb(78, 255, 158);
+    margin: auto;
+    width: 640px;
+    height: 50%;
+    box-align: center;
+    border:1rem double rgba(115, 39, 214, 0.856);
+    border-radius: 20px;
+    display: grid; 
+    gap: 20px;
+    grid-template-columns: 200px auto;
+}
+aside{
+    grid-column: 1/ span 1;
+}
+
+#canva-1{
+    grid-column: 1/span 3;
+    width: 100%;
+    height: 354px;
+}
+
+#video-container {
+    grid-column: 1/span 3;
+    margin: auto; 
+    padding: auto;
+    width: 100%;
+    flex: auto;
+}
+
+#localVideo {
+    width: 45%;
+}
+
+#remoteVideo {
+    width: 45%;
+    float: right;
+}
+
+#controls {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size:small;
+    margin: auto; 
+    margin-top: 0px;
+    margin-bottom: 20px;
+    padding-top: 0px;
+}
+
+#call-button {
+        background-color: deepskyblue;
+    padding: 10px; 
+    margin: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+}
+
+#controls h3 {
+    margin: auto;
+}
+
+.blur {
+    filter: blur(5px);
+}
+
+#filters {
+    grid-column: 1/span 3;
+    grid-template-columns: auto auto;
+    color: white;
+}
+
+#video_1 {
+    grid-column: 1/span 3;
+    width: 100%;
+}
+
+main p{
+    grid-column: 2/span 2;
+}
+
+aside img{
+    width: 200px;
+    object-fit: contain; 
+}
+
+#audio_box {
+    grid-column: 1/span 3;
+}
+
+#record {
+    background-color: deepskyblue;
+    padding: 10px; 
+    margin: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+}
+#canvaDraw {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    z-index: -1;
+    width: 100%;
+}
+
+#controlls {
+    grid-column: 3/ span 1;
+    display:grid;
+
+}
+#controlls a #mini{
+    background-color: deepskyblue;
+    width: 90%;
+    padding: 10px; 
+    margin: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+}
+
+#info a #backmain{
+    background-color: deepskyblue;
+    width: 30%;
+    padding: 10px; 
+    margin: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+}
+
+#mode{
+    background-color: deepskyblue;
+    padding: 10px; 
+    margin: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+}
+#mute{
+    background-color: deepskyblue;
+    padding: 10px; 
+    margin: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+}
+
+#activated{
+    background-color: deepskyblue;
+    padding: 10px; 
+    margin: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+}
+
+#controlls a #mini:hover{
+    background-color: rgba(30, 0, 255, 0.359);
+    color: black;
+}
+
+#mode:hover{
+    background-color: rgba(30, 0, 255, 0.359);
+    color: black;
+}
+#mute:hover{
+    background-color: rgba(30, 0, 255, 0.359);
+    color: black;
+}
+
+#activated:hover{
+    background-color: rgba(30, 0, 255, 0.359);
+    color: black;
+}
+
+
+main h1{
+    margin: auto;
+    color:rgba(115, 39, 214, 0.856);
+    font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    grid-column: 1 /span 2;
+    }
+main p {
+
+    font-family: Arial, Helvetica, sans-serif;
+    color: rgb(91, 91, 91);
+    text-align: justify;
+    padding-right: 10px;
+}
+section {
+    grid-column: 1 /span 3;
+    display: flex;
+    justify-content: space-around;
+    padding-bottom: 10px;
+}
+section button{
+    background-color: deepskyblue;
+    padding: 10px; 
+    border: none;
+    border-radius: 10px;
+    transition: ease-in-out 0.2s;
+    color: white;
+}
+
+section button a{
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+    transition: ease-in-out 0.2s;
+}
+
+section button:hover{
+    background-color: rgba(30, 0, 255, 0.359);
+}
+
+section button:hover a{
+    color: black;
+}
+
+main div{
+    grid-column: 1/ span 3;
+}
+
+#galleryLeft{
+    width: 100px;
+    height: 20px;
+    margin-left: 20px;
+    margin-top: 10px; 
+    margin-bottom: 10px; 
+    background-color: deepskyblue;
+    border: none;
+    border-radius: 10px;
+}
+
+#galleryRight{
+    float:right;
+    width: 100px;
+    height: 20px;
+    margin-right: 20px;
+    margin-top: 10px; 
+    margin-bottom: 10px;
+    background-color: deepskyblue;
+    border: none;
+    border-radius: 10px; 
+}
+
+#galleryText{
+    margin: auto;
+    color: white;
+    background-color: black;
+    padding: 10px;
+}
+
+#gallery{
+width: 100%;
+margin: auto;
+}
+
+
+@media only screen and (max-width: 700px){
+
+    main {
+        margin: auto;
+        width: 90%;
+        gap: 1px;
+    }
+
+    aside {
+        grid-column: 1 /span 2;
+        width:90%;
+        margin: auto;
+    }
+
+    aside img {
+        width: 100%;
+        height: 200px;
+        margin: auto;
+        object-fit: cover;
+        border: 3px solid rgb(35, 51, 131);
+        border-radius:5px;
+    }
+
+    main p {
+        grid-column: 1 /span 2;
+        padding: 10px;
+    }
+
+    section{
+        flex-direction: column;
+        gap: 10px;
+        margin: 10px; 
+    }
+
+    section button{
+    background-color: deepskyblue;
+    border: none;
+    border-radius: 10px;
+    padding-bottom: none;
+    transition: ease-in-out 0.2s;
+}
+    section button a{
+        font-size:smaller;
+    }
+}
+
+.test {
+    color: rgb(17, 224, 52)
+}

@@ -1,0 +1,137 @@
+/* Reset some defaults */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  background-color: #f5f5f5;
+  color: #333;
+  padding: 20px;
+}
+
+main {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 1000px;
+  margin: auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+h1 {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 2rem;
+  color: #222;
+}
+
+aside {
+  flex: 1 1 250px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+aside img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+p {
+  flex: 2 1 400px;
+  margin: 0 20px 20px 20px;
+  text-align: justify;
+}
+
+section {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+button {
+  background-color: #0077cc;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #005fa3;
+}
+
+button a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* Media Queries for responsiveness */
+
+@media (max-width: 768px) {
+  main {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  p {
+    margin: 10px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  button {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Video filter UI */
+#video-filter-container .vf-controls select,
+#video-filter-container .vf-controls input[type="range"],
+#video-filter-container .vf-controls button {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+}
+#video-filter-container #vf-canvas {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  background: #111; /* while initializing */
+}
+#video-filter-container #vf-status {
+  color: #333;
+}
+@media (max-width: 600px) {
+  #video-filter-container .vf-controls { gap:6px; }
+  #video-filter-container .vf-controls select,
+  #video-filter-container .vf-controls input[type="range"],
+  #video-filter-container .vf-controls button {
+    font-size: 0.88rem;
+    padding: 6px;
+  }
+}
+
