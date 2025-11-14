@@ -125,9 +125,21 @@
       walls.push({x:x,y:y,w:rectW,h:rectH});
     }
 
-    // place stars
+    // place stars with collision checking to avoid walls
     for(let i=0;i<3 + Math.min(n,5); i++){
-      stars.push({x:40 + Math.random()*(w-80), y:40 + Math.random()*(h-80), r:8, collected:false});
+      let sx, sy, valid=false;
+      for(let tries=0; tries<40 && !valid; tries++){
+        sx = 40 + Math.random()*(w-80);
+        sy = 40 + Math.random()*(h-80);
+        // check against walls
+        valid = true;
+        for(const r of walls){
+          if(rectCircleCollide(r.x, r.y, r.w, r.h, sx, sy, 10)){
+            valid = false; break;
+          }
+        }
+      }
+      stars.push({x:sx, y:sy, r:8, collected:false});
     }
 
     // place ball start
