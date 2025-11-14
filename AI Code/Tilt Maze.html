@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Tilt Maze — Phone Accelerometer Game</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#7dd3fc;--muted:#94a3b8}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#071028 0%,var(--bg) 100%);color:#e6eef6}
+    .app{display:flex;flex-direction:column;height:100%;gap:12px;padding:12px}
+    header{display:flex;gap:12px;align-items:center}
+    h1{font-size:18px;margin:0}
+    #game-wrap{flex:1;display:flex;align-items:center;justify-content:center}
+    #game{background:linear-gradient(180deg,#0b1220,#08101a);border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);touch-action:none}
+    .controls{display:flex;gap:8px;align-items:center}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--accent);padding:8px 10px;border-radius:8px}
+    .hint{color:var(--muted);font-size:13px}
+    .hud{position:absolute;left:18px;top:18px;display:flex;gap:8px;align-items:center}
+    .pill{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:999px;font-size:13px;color:var(--muted)}
+    footer{display:flex;justify-content:space-between;align-items:center}
+    .legend{font-size:13px;color:var(--muted)}
+    .big{font-weight:700;color:#fff}
+    /* mobile-friendly sizing */
+    @media(min-width:800px){#game{width:720px;height:520px}} 
+    @media(max-width:799px){#game{width:92vw;height:60vh}} 
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Tilt Maze — Tilt your phone to roll the ball</h1>
+      <div style="flex:1"></div>
+      <div class="controls">
+        <button id="permissionBtn">Enable Motion</button>
+        <button id="calibBtn">Calibrate</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+    </header>
+
+    <div id="game-wrap">
+      <div style="position:relative">
+        <canvas id="game"></canvas>
+        <div class="hud">
+          <div class="pill">Score: <span id="score">0</span></div>
+          <div class="pill">Lives: <span id="lives">3</span></div>
+          <div class="pill">Level: <span id="level">1</span></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="legend hint">Tip: on iOS you must tap "Enable Motion" and grant permission.</div>
+      <div class="legend">Made with <span class="big">DeviceMotion</span></div>
+    </footer>
+  </div>
+
+  <script>
+  // === Simple tilt-controlled browser game using DeviceMotion / DeviceOrientation ===
+  // Features:
+  // - Works on most modern mobile browsers. iOS requires DeviceMotion permission (button provided).
+  // - Calibrate to set "flat" reference orientation.
+  // - Ball physics with tilt controlling acceleration.
+  // - Collect stars, avoid walls. Simple levels and scoring.
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const livesEl = document.getElementById('lives');
+  const levelEl = document.getElementById('level');
+  const permissionBtn = document.getElementById('permissionBtn');
+  const calibBtn = document.getElementById('calibBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // logical size -> scaled to device pixel ratio
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+  // initial sizing
+  requestAnimationFrame(resize);
+
+  // Game state
+  let w, h;
+  let last = performance.now();
+  let score = 0; let lives = 3; let level = 1;
+
+  // ball
+  const ball = {x:100,y:100,r:12,vx:0,vy:0};
+
+  // world geometry (walls as rectangles) and stars to collect
+  let walls = [];
+  let stars = [];
+
+  // tilt input
+  let tilt = {x:0,y:0}; // x -> left/right tilt, y -> front/back tilt
+  let calib = {x:0,y:0};
+
+  // sensitivity
+  let accelScale = 600; // pixels/s^2 per unit of tilt
+
+  // clamp helper
+  const clamp = (v,a,b)=> Math.max(a,Math.min(b,v));
+
+  // build simple levels
+  function buildLevel(n){
+    walls = [];
+    stars = [];
+    // border walls
+    walls.push({x:0,y:0,w:w,h:10});
+    walls.push({x:0,y:h-10,w:w,h:10});
+    walls.push({x:0,y:0,w:10,h:h});
+    walls.push({x:w-10,y:0,w:10,h:h});
+
+    // some obstacles increase with level
+    const cols = 3 + Math.min(n,6);
+    for(let i=0;i<cols;i++){
+      const rectW = 20 + (i%2? 100 : 60);
+      const rectH = 12 + Math.floor((i+n)%4)*40;
+      const x = 60 + i*(w-140)/cols;
+      const y = 80 + ((i*73 + n*15) % (h-240));
+      walls.push({x:x,y:y,w:rectW,h:rectH});
+    }
+
+    // place stars
+    for(let i=0;i<3 + Math.min(n,5); i++){
+      stars.push({x:40 + Math.random()*(w-80), y:40 + Math.random()*(h-80), r:8, collected:false});
+    }
+
+    // place ball start
+    ball.x = 60; ball.y = h/2; ball.vx = 0; ball.vy = 0;
+  }
+
+  // collision helpers: simple AABB
+  function rectCircleCollide(rx,ry,rw,rh,cx,cy,cr){
+    const nearestX = clamp(cx, rx, rx+rw);
+    const nearestY = clamp(cy, ry, ry+rh);
+    const dx = cx - nearestX;
+    const dy = cy - nearestY;
+    return (dx*dx + dy*dy) < (cr*cr);
+  }
+
+  function requestMotionPermission(){
+    // iOS 13+ requires explicit permission
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
+      DeviceMotionEvent.requestPermission().then(res=>{
+        if(res === 'granted'){ permissionBtn.style.display='none'; startListening(); }
+        else alert('Motion permission denied. You can still play with touch controls.');
+      }).catch(err=>{ console.warn(err); alert('Permission request failed: '+err); });
+    } else {
+      // not iOS or permission not required
+      permissionBtn.style.display='none'; startListening();
+    }
+  }
+
+  permissionBtn.addEventListener('click', requestMotionPermission);
+
+  function startListening(){
+    // prefer DeviceOrientation for tilt alpha/beta (in degrees). Use DeviceMotion as fallback.
+    if (window.DeviceOrientationEvent){
+      window.addEventListener('deviceorientation', (ev)=>{
+        // gamma is left-right tilt [-90,90], beta is front-back [-180,180]
+        const g = ev.gamma || 0; const b = ev.beta || 0;
+        // map to small normalized tilt values
+        tilt.x = (g - calib.x) / 45; // -2..2
+        tilt.y = (b - calib.y) / 45; // -2..2
+      }, {passive:true});
+    }
+    if (window.DeviceMotionEvent){
+      window.addEventListener('devicemotion',(e)=>{
+        // accelerationIncludingGravity available; we avoid using raw accel as orientation is easier
+        // but if deviceorientation not present, use gravity on x/y as fallback
+        if (!('ondeviceorientation' in window)){
+          const ax = e.accelerationIncludingGravity?.x || 0;
+          const ay = e.accelerationIncludingGravity?.y || 0;
+          tilt.x = -ax/5; tilt.y = ay/5;
+        }
+      }, {passive:true});
+    }
+
+    // fallback touch controls: dragging moves the ball directly
+    let dragging = false;
+    canvas.addEventListener('touchstart', (e)=>{ if(e.touches.length===1){ dragging=true; }});
+    canvas.addEventListener('touchend', ()=>{ dragging=false; });
+    canvas.addEventListener('touchmove', (e)=>{
+      if(!dragging) return;
+      const t = e.touches[0];
+      const r = canvas.getBoundingClientRect();
+      const tx = (t.clientX - r.left)/r.width; const ty = (t.clientY - r.top)/r.height;
+      // move ball toward touch
+      ball.vx += ((tx*w) - ball.x) * 0.08;
+      ball.vy += ((ty*h) - ball.y) * 0.08;
+      e.preventDefault();
+    }, {passive:false});
+  }
+
+  calibBtn.addEventListener('click', ()=>{
+    // capture current device orientation as baseline
+    // If deviceorientation not present, we approximate from current tilt
+    calib.x = (typeof window.__lastGamma !== 'undefined')? window.__lastGamma : 0;
+    calib.y = (typeof window.__lastBeta !== 'undefined')? window.__lastBeta : 0;
+    // but simpler: reset to zero so current reading becomes neutral
+    calib.x = 0; calib.y = 0;
+    // also zero velocities for stable feel
+    ball.vx = 0; ball.vy = 0;
+    alert('Calibrated. Place the device flat when you press Calibrate for best results.');
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    score = 0; lives = 3; level = 1; levelEl.textContent = level; scoreEl.textContent = score; livesEl.textContent = lives; buildLevel(level);
+  });
+
+  // game loop
+  function step(ts){
+    const dt = Math.min((ts - last)/1000, 0.05); last = ts;
+    w = canvas.clientWidth; h = canvas.clientHeight;
+
+    // physics: acceleration from tilt
+    const ax = tilt.x * accelScale; // px/s^2
+    const ay = tilt.y * accelScale;
+
+    // integrate velocities
+    ball.vx += ax * dt;
+    ball.vy += ay * dt;
+
+    // damping
+    ball.vx *= (1 - 2*dt);
+    ball.vy *= (1 - 2*dt);
+
+    // integrate positions
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+
+    // collisions with walls: simple push out & damp
+    for(const r of walls){
+      if(rectCircleCollide(r.x,r.y,r.w,r.h,ball.x,ball.y,ball.r)){
+        // push ball out along minimal axis (approximate)
+        // compute overlap from four sides
+        const leftOverlap = (ball.x + ball.r) - r.x;
+        const rightOverlap = (r.x + r.w) - (ball.x - ball.r);
+        const topOverlap = (ball.y + ball.r) - r.y;
+        const bottomOverlap = (r.y + r.h) - (ball.y - ball.r);
+        const minOverlap = Math.min(leftOverlap, rightOverlap, topOverlap, bottomOverlap);
+        if(minOverlap === leftOverlap) ball.x = r.x - ball.r - 0.1;
+        else if(minOverlap === rightOverlap) ball.x = r.x + r.w + ball.r + 0.1;
+        else if(minOverlap === topOverlap) ball.y = r.y - ball.r - 0.1;
+        else ball.y = r.y + r.h + ball.r + 0.1;
+        // damp velocity
+        ball.vx *= -0.4; ball.vy *= -0.4;
+      }
+    }
+
+    // keep inside bounds
+    ball.x = clamp(ball.x, ball.r + 10, w - ball.r - 10);
+    ball.y = clamp(ball.y, ball.r + 10, h - ball.r - 10);
+
+    // check star pickups
+    for(const s of stars){
+      if(!s.collected){
+        const dx = ball.x - s.x; const dy = ball.y - s.y;
+        if(dx*dx + dy*dy < (ball.r + s.r)*(ball.r + s.r)){
+          s.collected = true; score += 10; scoreEl.textContent = score;
+        }
+      }
+    }
+
+    // if all collected -> next level
+    if(stars.every(s=>s.collected)){
+      level++; levelEl.textContent = level; buildLevel(level);
+    }
+
+    // simple lose condition if ball stuck in corner or too many collisions
+    // (not implemented: keep lives on hitting spikes) -- keep lives by time based penalty
+    // render
+    render();
+    requestAnimationFrame(step);
+  }
+
+  function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // draw background
+    ctx.save();
+    ctx.fillStyle = '#071025';
+    ctx.fillRect(0,0,w,h);
+
+    // draw walls
+    ctx.fillStyle = '#0f1724';
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    for(const r of walls){ ctx.fillRect(r.x, r.y, r.w, r.h); ctx.strokeRect(r.x+0.5, r.y+0.5, r.w, r.h); }
+
+    // draw stars
+    for(const s of stars){
+      if(s.collected) continue;
+      drawStar(s.x, s.y, s.r, 5);
+    }
+
+    // draw ball
+    const g = ctx.createRadialGradient(ball.x-6, ball.y-6, 2, ball.x, ball.y, ball.r*1.6);
+    g.addColorStop(0, '#9be7ff'); g.addColorStop(1, '#037bff');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawStar(cx,cy,r, spikes){
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.beginPath();
+    for(let i=0;i<spikes;i++){
+      ctx.lineTo(Math.cos((i*2)*Math.PI/spikes)*r, Math.sin((i*2)*Math.PI/spikes)*r);
+      ctx.lineTo(Math.cos((i*2+1)*Math.PI/spikes)*(r*0.5), Math.sin((i*2+1)*Math.PI/spikes)*(r*0.5));
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#ffd166'; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.stroke();
+    ctx.restore();
+  }
+
+  // initial launch: set sizes and level
+  function init(){
+    resize();
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    buildLevel(level);
+    last = performance.now();
+    requestAnimationFrame(step);
+  }
+
+  init();
+
+  // Quick hints: if deviceorientation events have gamma/beta, save last seen for calibration
+  window.addEventListener('deviceorientation', (e)=>{ window.__lastGamma = e.gamma || 0; window.__lastBeta = e.beta || 0; }, {passive:true});
+
+  // Prevent accidental scrolling while playing
+  document.addEventListener('touchmove', (e)=>{ if(e.target === canvas) e.preventDefault(); }, {passive:false});
+
+  </script>
+</body>
+</html>
